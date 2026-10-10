@@ -42,7 +42,7 @@ export function Footer() {
         <nav aria-label="Marketplace">
           <h3 className="font-heading font-semibold">Marketplace</h3>
           <ul className="mt-4 space-y-2.5 text-sm text-muted-foreground">
-            {[...links, { to: '/wishlist', label: 'Wishlist' }].map((link) => (
+            {[...links, { to: '/wishlist', label: 'Wishlist' }, { to: '/sell', label: 'Sell on Muhuze' }].map((link) => (
               <li key={link.to}>
                 <Link to={link.to} className="transition hover:text-primary">{link.label}</Link>
               </li>

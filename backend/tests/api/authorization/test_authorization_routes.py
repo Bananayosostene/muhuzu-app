@@ -475,3 +475,76 @@ async def test_startup_never_resets_an_existing_accounts_password(
     )
     assert old.status_code == 200
     assert new.status_code == 401
+
+
+# ── The account list ─────────────────────────────────────────────────────
+
+
+async def test_listing_accounts_needs_the_permission(db_client: AsyncClient, user) -> None:
+    anonymous = await db_client.get(f"{API}/accounts")
+    ordinary = await db_client.get(f"{API}/accounts", headers=user.headers)
+
+    assert anonymous.status_code == 401
+    assert ordinary.status_code == 403
+
+
+async def test_accounts_are_listed_newest_first_with_their_roles(
+    db_client: AsyncClient, admin, user
+) -> None:
+    response = await db_client.get(f"{API}/accounts", headers=admin.headers)
+
+    assert response.status_code == 200
+    page = response.json()["data"]
+    assert page["total"] == 2
+    # `user` signed up after `admin`.
+    assert [(row["email"], row["roles"]) for row in page["items"]] == [
+        ("user@example.com", ["buyer"]),
+        ("admin@example.com", ["admin", "buyer"]),
+    ]
+    assert set(page["items"][0]) == {
+        "id", "email", "phone", "full_name", "status", "is_verified", "created_at", "roles",
+    }  # fmt: skip
+
+
+async def test_accounts_can_be_filtered_by_role(
+    db_client: AsyncClient, admin, user, role_id
+) -> None:
+    admins = await db_client.get(
+        f"{API}/accounts", params={"role_id": await role_id("admin")}, headers=admin.headers
+    )
+    nobody = await db_client.get(
+        f"{API}/accounts", params={"role_id": str(uuid.uuid4())}, headers=admin.headers
+    )
+
+    assert [row["email"] for row in admins.json()["data"]["items"]] == ["admin@example.com"]
+    assert nobody.json()["data"]["total"] == 0
+
+
+async def test_accounts_can_be_searched_by_name_or_email(
+    db_client: AsyncClient, admin, user
+) -> None:
+    async def emails(q: str) -> list[str]:
+        response = await db_client.get(f"{API}/accounts", params={"q": q}, headers=admin.headers)
+        assert response.status_code == 200, response.text
+        return sorted(row["email"] for row in response.json()["data"]["items"])
+
+    assert await emails("USER@") == ["user@example.com"]
+    assert await emails("test person") == ["admin@example.com", "user@example.com"]
+    # A typed % is a literal character, not a wildcard.
+    assert await emails("%") == []
+
+
+async def test_accounts_can_be_filtered_by_status(db_client: AsyncClient, admin) -> None:
+    active = await db_client.get(
+        f"{API}/accounts", params={"status": "active"}, headers=admin.headers
+    )
+    suspended = await db_client.get(
+        f"{API}/accounts", params={"status": "suspended"}, headers=admin.headers
+    )
+    unknown = await db_client.get(
+        f"{API}/accounts", params={"status": "banned"}, headers=admin.headers
+    )
+
+    assert active.json()["data"]["total"] == 1
+    assert suspended.json()["data"]["total"] == 0
+    assert unknown.status_code == 422

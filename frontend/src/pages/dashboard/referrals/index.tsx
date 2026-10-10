@@ -2,9 +2,7 @@ import { Coins, Copy, Percent, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useSession } from '@/hooks/use-session'
 import { formatDate, formatPrice } from '@/lib/format'
-import { referralLink } from '@/lib/referral'
 import { DataTable, type Column } from '../_components/DataTable'
 import { PageHeader } from '../_components/PageHeader'
 import { StatCard } from '../_components/StatCard'
@@ -22,6 +20,7 @@ interface Referral {
 }
 
 // Demo data until the referrals endpoint exists.
+const link = `${location.origin}/r/DEMO2026`
 const referrals: Referral[] = [
   { id: 1, name: 'Sandrine Umutoni', joinedAs: 'Buyer', joined: '2026-05-02', deals: 6, volume: 1_240_000 },
   { id: 2, name: 'Claire Mukamana', joinedAs: 'Seller', joined: '2026-07-08', deals: 14, volume: 3_910_000 },
@@ -32,8 +31,6 @@ const referrals: Referral[] = [
 
 export default function DashboardReferrals() {
   const { items: [rates] } = useRates()
-  const { user } = useSession()
-  const link = user ? referralLink(user.referralCode) : ''
   const earned = (volume: number) => (volume * rates.referral) / 100
   const total = referrals.reduce((sum, row) => sum + earned(row.volume), 0)
 

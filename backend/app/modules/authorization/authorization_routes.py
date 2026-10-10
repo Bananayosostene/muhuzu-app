@@ -4,14 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 
-from app.modules.auth.auth_dependencies import get_current_account
+from app.modules.auth.auth_dependencies import get_auth_service, get_current_account
 from app.modules.auth.auth_model import Account
+from app.modules.auth.auth_schema import AccountListFilters, AccountSummaryResponse
+from app.modules.auth.auth_service import AuthService
 from app.modules.authorization.authorization_dependencies import (
     get_authorization_service,
     get_target_account,
     require_permission,
 )
 from app.modules.authorization.authorization_permissions import (
+    ACCOUNT_READ,
     PERMISSION_GRANT,
     PERMISSION_READ,
     ROLE_ASSIGN,
@@ -175,6 +178,23 @@ async def remove_permission_from_role(
     """Remove a permission from a role."""
     await service.remove_permission_from_role(role_id, permission_code, changed_by=admin.id)
     return success_response(message="Permission removed from role")
+
+
+# ── Accounts ─────────────────────────────────────────────────────────────
+
+
+@authorization_router.get("/accounts", response_model=APIResponse[Page[AccountSummaryResponse]])
+async def list_accounts(
+    _: allowed(ACCOUNT_READ),
+    pagination: PaginationDep,
+    filters: Annotated[AccountListFilters, Depends()],
+    auth_service: Annotated[AuthService, Depends(get_auth_service)],
+) -> JSONResponse:
+    """Every account with the roles it holds, newest first: how staff find
+    the account a role is given to. Search by name or email, and filter by
+    role or status."""
+    page = await auth_service.list_accounts(pagination, filters)
+    return success_response(data=page, message="Accounts retrieved")
 
 
 # ── Roles of an account ──────────────────────────────────────────────────

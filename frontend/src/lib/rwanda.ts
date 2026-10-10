@@ -1,4 +1,4 @@
-/** Rwanda's provinces and their districts. Sectors and cells are typed by the buyer. */
+/** Rwanda's provinces and their districts. Sectors and cells are typed by the person. */
 export const provinces: Record<string, string[]> = {
   'Kigali City': ['Gasabo', 'Kicukiro', 'Nyarugenge'],
   Northern: ['Burera', 'Gakenke', 'Gicumbi', 'Musanze', 'Rulindo'],

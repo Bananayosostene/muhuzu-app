@@ -1,16 +1,15 @@
-import { BadgeCheck, Gift, Headset, Wallet, type LucideIcon } from 'lucide-react'
+import { BadgeCheck, ShieldCheck, Store, Truck, type LucideIcon } from 'lucide-react'
 
 // Shared by the header and the footer.
 export const links = [
   { to: '/products', label: 'All products' },
-  { to: '/products?type=sale', label: 'Buy' },
-  { to: '/products?type=rental', label: 'Rent' },
-  { to: '/products?type=service', label: 'Services' },
+  { to: '/products?sort=price', label: 'Lowest price' },
+  { to: '/products?sort=-price', label: 'Highest price' },
 ]
 
 export const features: { icon: LucideIcon; title: string; text: string }[] = [
-  { icon: BadgeCheck, title: 'Verified sellers', text: 'Subscribed and trusted' },
-  { icon: Gift, title: 'Referral rewards', text: 'Earn on every deal' },
-  { icon: Wallet, title: 'Clear earnings', text: 'Track it in your wallet' },
-  { icon: Headset, title: 'Direct contact', text: 'Talk to the seller' },
+  { icon: BadgeCheck, title: 'Verified sellers', text: 'Every shop is reviewed by Muhuze' },
+  { icon: ShieldCheck, title: 'Pay through Muhuze', text: 'Your payment is confirmed before the seller ships' },
+  { icon: Truck, title: 'Track your order', text: 'Follow each shop’s part until it arrives' },
+  { icon: Store, title: 'Many shops, one order', text: 'Buy from several sellers at once' },
 ]

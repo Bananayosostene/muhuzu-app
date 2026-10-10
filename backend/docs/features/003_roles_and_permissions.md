@@ -54,6 +54,7 @@ Decide what each account is allowed to do. Authentication (001) answers *who are
 | `role.assign` | Give a role to an account, or take it away | – |
 | `permission.read` | See the permission catalog and an account's direct grants | – |
 | `permission.grant` | Grant a permission directly to an account, or revoke it | – |
+| `account.read` | See every account (name, email, phone, status) with the roles it holds | – |
 
 None has a default role, so only `admin` can manage access until an admin decides otherwise.
 
@@ -124,12 +125,21 @@ The module is named `authorization` (not `roles` or `permissions`) because it ow
 - [x] Who granted a role or a direct permission is recorded (`granted_by_account_id`), and every change is logged with the acting account.
 - [x] The bootstrap password is a secret setting, at least 12 characters, and never overwrites an existing account's password.
 
+## The account list
+
+Added 2026-10-10 so an admin screen can find the account a role is given to (it closed the gap "no list of accounts holding role X").
+
+- `GET /accounts` returns every account with the names of its roles, newest first, and needs `account.read`. It exposes personal data (email, phone), so it has its own permission instead of reusing `role.read`.
+- It never returns a password hash, a token, or anything else secret.
+- Filters: `q` (full name or email), `role_id`, `status`. All applied in SQL.
+- **Ownership.** Accounts belong to the authentication feature, so the query lives in `AccountRepository` and `AuthService.list_accounts`. "Who holds a role" belongs here: this feature exposes it as the subquery `account_ids_with_role()` and as `get_role_names_by_account()`, which fills in the roles of one page of accounts with a single query (AGENTS.md §7, §12).
+- **Not included:** creating an account for someone else, and suspending or reactivating an account. Both need rules that are not decided yet (`002_users`).
+
 ## Known gaps
 
 | Gap | Risk | Planned with |
 |---|---|---|
 | The last admin can still be removed by *another* admin, leaving one; and nothing prevents every admin being suspended | Lock-out. Recoverable through the bootstrap variables | Revisit with `015_admin` |
-| No list of "accounts holding role X" | Admin UI can't show a role's members | `002_users` / `015_admin` (account directory) |
 | Permissions are read from the database on every protected request | One extra query per request | Cache if it ever shows up in profiling |
 | Role and permission changes are logged, but there is no audit table | History lives only in logs | `015_admin` |
 

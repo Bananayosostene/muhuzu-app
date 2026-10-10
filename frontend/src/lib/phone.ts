@@ -7,3 +7,9 @@ export const phoneField = {
   placeholder: '078 / 072 …',
   title: 'Ten digits starting with 078, 079, 072 or 073',
 } as const
+
+/** The backend stores phone numbers in E.164: 0788123456 becomes +250788123456. */
+export const toE164 = (local: string) => `+250${local.trim().slice(1)}`
+
+/** Back to what the person types: +250788123456 becomes 0788123456. */
+export const fromE164 = (phone: string) => phone.replace(/^\+250/, '0')

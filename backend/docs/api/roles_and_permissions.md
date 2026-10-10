@@ -30,6 +30,7 @@ Permissions are read live, so a change made by an admin applies to the user's ne
 | GET | `/roles/{role_id}/permissions` | `role.read` | Permissions a role carries |
 | PUT | `/roles/{role_id}/permissions/{code}` | `role.manage` | Add a permission to a role |
 | DELETE | `/roles/{role_id}/permissions/{code}` | `role.manage` | Remove a permission from a role |
+| GET | `/accounts` | `account.read` | Every account with its roles, newest first. `q`, `role_id`, `status`, `page`, `page_size` |
 | GET | `/accounts/{account_id}/roles` | `role.read` | Roles an account holds |
 | PUT | `/accounts/{account_id}/roles/{role_id}` | `role.assign` | Give a role to an account |
 | DELETE | `/accounts/{account_id}/roles/{role_id}` | `role.assign` | Take a role from an account |
@@ -38,6 +39,33 @@ Permissions are read live, so a change made by an admin applies to the user's ne
 | DELETE | `/accounts/{account_id}/permissions/{code}` | `permission.grant` | Revoke a direct grant |
 
 `PUT` and `DELETE` are safe to repeat: granting something already granted, or revoking something not held, returns `200`.
+
+## Finding an account
+
+`GET /accounts` is how staff find the account to give a role to.
+
+| Parameter | Meaning |
+|---|---|
+| `q` | Searches the full name and the email: contains, case-insensitive, 1 to 100 characters |
+| `role_id` | Only accounts holding this role. An unknown role matches nobody |
+| `status` | `active`, `suspended`, or `deactivated` |
+
+**Account** (one row)
+
+```json
+{
+  "id": "0d6e…",
+  "email": "amina@example.com",
+  "phone": "+250788123456",
+  "full_name": "Amina Uwase",
+  "status": "active",
+  "is_verified": true,
+  "created_at": "2026-10-05T17:30:00Z",
+  "roles": ["buyer", "seller"]
+}
+```
+
+`roles` are role names, sorted. Use the role's `id` from `GET /roles` to give or take one.
 
 ## Bodies and objects
 

@@ -1,83 +1,50 @@
-import { useState, type ComponentProps } from 'react'
+import { Field } from '@/components/shared/FormField'
+import { RegionFields } from '@/components/shared/RegionFields'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
-import { phoneField } from '@/lib/phone'
-import type { DeliveryDetails } from '@/types/order'
-import { provinces } from '../_data'
+import { phoneField, toE164 } from '@/lib/phone'
+import type { OrderRequest } from '@/types/order'
 
 interface Props {
   /** Known when the buyer is signed in. */
   defaultName?: string
   pending: boolean
-  onSubmit: (details: DeliveryDetails) => void
-}
-
-function Field({ label, hint, ...props }: ComponentProps<typeof Input> & { label: string; hint?: string }) {
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={props.name}>{label}</Label>
-      <Input id={props.name} required className="h-10" {...props} />
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-    </div>
-  )
-}
-
-function Select({ label, name, options, ...props }: ComponentProps<typeof NativeSelect> & { label: string; options: string[] }) {
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor={name}>{label}</Label>
-      <NativeSelect id={name} name={name} required className="w-full [&_select]:h-10" {...props}>
-        <NativeSelectOption value="">Choose…</NativeSelectOption>
-        {options.map((option) => <NativeSelectOption key={option}>{option}</NativeSelectOption>)}
-      </NativeSelect>
-    </div>
-  )
+  onSubmit: (details: Omit<OrderRequest, 'items'>) => void
 }
 
 export function DeliveryForm({ defaultName, pending, onSubmit }: Props) {
-  const [province, setProvince] = useState('')
-
   return (
     <form
       className="grid gap-8 rounded-2xl border bg-card p-6"
       onSubmit={(event) => {
         event.preventDefault()
         const data = new FormData(event.currentTarget)
-        const text = (name: keyof DeliveryDetails) => String(data.get(name) ?? '').trim()
+        const text = (name: string) => String(data.get(name) ?? '').trim()
         onSubmit({
-          name: text('name'), phone: text('phone'), province: text('province'), district: text('district'),
-          sector: text('sector'), cell: text('cell'), paymentPhone: text('paymentPhone'),
+          delivery: {
+            recipient_name: text('recipient_name'), recipient_phone: toE164(text('recipient_phone')),
+            province: text('province'), district: text('district'), sector: text('sector'),
+            ...(text('address') && { address: text('address') }),
+          },
+          ...(text('note') && { note: text('note') }),
         })
       }}
     >
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-4 font-heading text-lg font-semibold">Who is receiving it?</legend>
-        <Field label="Full name" name="name" autoComplete="name" defaultValue={defaultName} />
-        <Field label="Phone number" name="phone" autoComplete="tel" {...phoneField} />
+        <Field label="Full name" name="recipient_name" autoComplete="name" maxLength={150} defaultValue={defaultName} />
+        <Field label="Phone number" name="recipient_phone" autoComplete="tel" {...phoneField} />
       </fieldset>
 
       <fieldset className="grid gap-4 sm:grid-cols-2">
         <legend className="mb-4 font-heading text-lg font-semibold">Where should it be delivered?</legend>
-        <Select label="Province" name="province" options={Object.keys(provinces)} value={province} onChange={(event) => setProvince(event.target.value)} />
-        <Select key={province} label="District" name="district" options={provinces[province] ?? []} disabled={!province} />
-        <Field label="Sector" name="sector" />
-        <Field label="Cell" name="cell" />
+        <RegionFields />
+        <Field label="Cell, street or landmark (optional)" name="address" required={false} maxLength={255} />
       </fieldset>
 
-      <fieldset className="grid gap-4">
-        <legend className="mb-4 font-heading text-lg font-semibold">Which number will you pay from?</legend>
-        <Field
-          label="Mobile money number"
-          name="paymentPhone"
-          hint="You send the money yourself, outside Muhuze. We use this number to match your payment to the order."
-          {...phoneField}
-        />
-      </fieldset>
+      <Field label="Note for the seller (optional)" name="note" required={false} maxLength={500} placeholder="Call before delivery" />
 
       <Button type="submit" size="lg" disabled={pending} className="h-12 rounded-full text-base shadow-lg shadow-primary/30">
-        {pending ? 'Placing order…' : 'Complete order'}
+        {pending ? 'Placing order…' : 'Place order'}
       </Button>
     </form>
   )

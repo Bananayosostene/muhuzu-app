@@ -31,6 +31,14 @@ PERMISSION_GRANT = PermissionDefinition(
     name="Grant permissions to accounts",
     description="Give one permission directly to one account, or take it away.",
 )
+ACCOUNT_READ = PermissionDefinition(
+    code="account.read",
+    name="View accounts",
+    description=(
+        "See every account: its name, email, phone, status, and the roles it holds. "
+        "Needed to find the account a role is given to."
+    ),
+)
 
 AUTHORIZATION_PERMISSIONS = (
     ROLE_READ,
@@ -38,4 +46,5 @@ AUTHORIZATION_PERMISSIONS = (
     ROLE_ASSIGN,
     PERMISSION_READ,
     PERMISSION_GRANT,
+    ACCOUNT_READ,
 )

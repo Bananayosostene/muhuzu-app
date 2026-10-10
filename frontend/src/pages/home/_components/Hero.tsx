@@ -1,7 +1,7 @@
-import type { Product } from '@/types/product'
+import type { ProductSummary } from '@/types/product'
 import { CountUp } from './CountUp'
 import { HeroScene } from './HeroScene'
-import { LocationSearch } from './LocationSearch'
+import { HeroSearch } from './HeroSearch'
 
 const stats = [
   { value: 15_000, suffix: '+', label: 'Products' },
@@ -10,7 +10,7 @@ const stats = [
   { value: 98, suffix: '%', label: 'Satisfaction' },
 ]
 
-export function Hero({ products }: { products: Product[] }) {
+export function Hero({ products }: { products: ProductSummary[] }) {
   return (
     <section className="relative overflow-hidden bg-muted">
       <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 md:grid-cols-2 md:py-20">
@@ -23,7 +23,7 @@ export function Hero({ products }: { products: Product[] }) {
           <p className="mx-auto mt-5 max-w-md text-lg font-light text-muted-foreground md:mx-0">
             Phones, houses, cars and skilled people in one place. Share with friends and earn on every deal.
           </p>
-          <LocationSearch />
+          <HeroSearch />
           <dl className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-4 md:justify-start">
             {stats.map((stat) => (
               <div key={stat.label}>

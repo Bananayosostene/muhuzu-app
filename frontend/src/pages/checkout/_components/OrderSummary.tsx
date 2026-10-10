@@ -1,9 +1,17 @@
+import { ProductImage } from '@/components/shared/ProductGrid'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatPrice } from '@/lib/format'
-import type { Product } from '@/types/product'
+import type { ProductSummary } from '@/types/product'
 
-/** Pass `undefined` while loading. */
-export function OrderSummary({ items }: { items?: Product[] }) {
+interface Props {
+  /** Undefined while loading. */
+  items?: ProductSummary[]
+  /** Product id to how many are being ordered. */
+  quantities: Record<string, number>
+}
+
+/** What is about to be ordered. */
+export function OrderSummary({ items, quantities }: Props) {
   if (!items) return <Skeleton className="h-64 rounded-2xl" />
 
   return (
@@ -12,17 +20,13 @@ export function OrderSummary({ items }: { items?: Product[] }) {
       <ul className="mt-4 space-y-3">
         {items.map((product) => (
           <li key={product.id} className="flex items-center gap-3">
-            <img src={product.image} alt="" width={48} height={48} loading="lazy" className="size-12 shrink-0 rounded-lg object-cover" />
-            <p className="line-clamp-2 flex-1 text-sm">{product.title}</p>
-            <p className="text-sm font-medium whitespace-nowrap">{formatPrice(product.price)}</p>
+            <ProductImage src={product.main_image_url} className="size-12 shrink-0 rounded-lg" />
+            <p className="flex-1 text-sm"><span className="line-clamp-2">{product.name}</span><span className="text-muted-foreground">{quantities[product.id] ?? 1} × {formatPrice(product.price)}</span></p>
           </li>
         ))}
       </ul>
-      <p className="mt-5 flex items-center justify-between border-t pt-4 text-muted-foreground">
-        Total
-        <span className="font-heading text-xl font-extrabold text-foreground">
-          {formatPrice(items.reduce((sum, product) => sum + product.price, 0))}
-        </span>
+      <p className="mt-5 border-t pt-4 text-sm text-muted-foreground">
+        The total to pay is confirmed once the order is placed. You then pay Muhuze with mobile money or a bank transfer, outside the app.
       </p>
     </aside>
   )

@@ -4,7 +4,8 @@ const money = new Intl.NumberFormat('en-RW', { style: 'currency', currency: 'RWF
 const compact = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 })
 const date = new Intl.DateTimeFormat('en', { dateStyle: 'medium' })
 
-export const formatPrice = (value: number) => money.format(value)
+/** Accepts the backend's decimal strings ("850000.00") as well as numbers. */
+export const formatPrice = (value: number | string) => money.format(Number(value))
 export const formatCount = (value: number) => compact.format(value)
 export const formatDate = (iso: string) => date.format(new Date(iso))
 

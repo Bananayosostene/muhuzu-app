@@ -2,6 +2,7 @@
 the service owns the transaction (AGENTS.md §13)."""
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
@@ -104,6 +105,23 @@ class AuthorizationRepository:
             .order_by(Role.name)
         )
         return list(result)
+
+    async def get_role_names_by_account(
+        self, account_ids: Sequence[uuid.UUID]
+    ) -> dict[uuid.UUID, list[str]]:
+        """The role names of several accounts in one query, for a list of accounts."""
+        names: dict[uuid.UUID, list[str]] = {account_id: [] for account_id in account_ids}
+        if not account_ids:
+            return names
+        rows = await self._session.execute(
+            select(AccountRole.account_id, Role.name)
+            .join(Role, Role.id == AccountRole.role_id)
+            .where(AccountRole.account_id.in_(account_ids))
+            .order_by(Role.name)
+        )
+        for account_id, name in rows:
+            names[account_id].append(name)
+        return names
 
     async def list_account_roles(
         self, account_id: uuid.UUID, pagination: PaginationParams

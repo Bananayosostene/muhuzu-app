@@ -4,7 +4,7 @@ service owns the transaction (AGENTS.md §13)."""
 import uuid
 from datetime import datetime
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import Select, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.auth_model import (
@@ -13,6 +13,7 @@ from app.modules.auth.auth_model import (
     RefreshToken,
     VerificationCode,
 )
+from app.shared.responses.pagination import PaginationParams
 
 
 class AccountRepository:
@@ -31,6 +32,39 @@ class AccountRepository:
     async def add(self, account: Account) -> None:
         self._session.add(account)
         await self._session.flush()
+
+    async def list_accounts(
+        self,
+        pagination: PaginationParams,
+        *,
+        search: str | None,
+        status: str | None,
+        only_ids: Select | None,
+    ) -> tuple[list[Account], int]:
+        """Newest first. `only_ids` is a subquery of account ids from another
+        feature (for example "the accounts holding this role")."""
+        statement = select(Account)
+        if search is not None:
+            # autoescape: % and _ typed by the user match literally.
+            statement = statement.where(
+                or_(
+                    Account.full_name.icontains(search, autoescape=True),
+                    Account.email.icontains(search, autoescape=True),
+                )
+            )
+        if status is not None:
+            statement = statement.where(Account.status == status)
+        if only_ids is not None:
+            statement = statement.where(Account.id.in_(only_ids))
+
+        total = await self._session.scalar(select(func.count()).select_from(statement.subquery()))
+        rows = await self._session.scalars(
+            # The id makes the order stable when two accounts share a timestamp.
+            statement.order_by(Account.created_at.desc(), Account.id)
+            .offset(pagination.offset)
+            .limit(pagination.limit)
+        )
+        return list(rows), total or 0
 
 
 class RefreshTokenRepository:

@@ -53,9 +53,16 @@ from app.modules.auth.auth_repository import (
     RefreshTokenRepository,
     VerificationCodeRepository,
 )
-from app.modules.auth.auth_schema import SessionResponse
+from app.modules.auth.auth_schema import (
+    AccountListFilters,
+    AccountSummaryResponse,
+    SessionResponse,
+)
 from app.modules.authorization.authorization_constants import SystemRole
-from app.modules.authorization.authorization_service import AuthorizationService
+from app.modules.authorization.authorization_service import (
+    AuthorizationService,
+    account_ids_with_role,
+)
 from app.shared.exceptions.application_exceptions import AuthenticationError
 from app.shared.responses.pagination import Page, PaginationParams
 
@@ -178,6 +185,35 @@ class AuthService:
         if account is None:
             raise AccountNotFoundError()
         return account
+
+    async def list_accounts(
+        self, pagination: PaginationParams, filters: AccountListFilters
+    ) -> Page[AccountSummaryResponse]:
+        """Every account with the roles it holds, newest first, for staff.
+        Never includes anything secret: no password hash, no tokens."""
+        accounts, total = await self._accounts.list_accounts(
+            pagination,
+            search=filters.q,
+            status=filters.status.value if filters.status else None,
+            only_ids=account_ids_with_role(filters.role_id) if filters.role_id else None,
+        )
+        roles = await self._authorization.get_role_names_by_account(
+            [account.id for account in accounts]
+        )
+        items = [
+            AccountSummaryResponse(
+                id=account.id,
+                email=account.email,
+                phone=account.phone,
+                full_name=account.full_name,
+                status=AccountStatus(account.status),
+                is_verified=account.is_verified,
+                created_at=account.created_at,
+                roles=roles[account.id],
+            )
+            for account in accounts
+        ]
+        return Page.build(items, total, pagination)
 
     async def request_email_verification(self, *, email: str) -> None:
         """Send a fresh code. Silent when there is nothing to verify, so the

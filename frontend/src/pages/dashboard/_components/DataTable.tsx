@@ -20,7 +20,7 @@ interface Props<T> {
 
 const PAGE_SIZE = 8
 
-export function DataTable<T extends { id: number }>({ rows, columns, search, toolbar }: Props<T>) {
+export function DataTable<T extends { id: number | string }>({ rows, columns, search, toolbar }: Props<T>) {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
 
@@ -48,7 +48,7 @@ export function DataTable<T extends { id: number }>({ rows, columns, search, too
               />
             </div>
           )}
-          <div className="ml-auto">{toolbar}</div>
+          <div className={search ? 'ml-auto' : undefined}>{toolbar}</div>
         </div>
       )}
       <Table>

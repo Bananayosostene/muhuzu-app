@@ -11,9 +11,10 @@ Every other public method is one unit of work and commits it.
 """
 
 import uuid
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
+from sqlalchemy import Select, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,12 +29,22 @@ from app.modules.authorization.authorization_exceptions import (
     RoleNotFoundError,
     SystemRoleProtectedError,
 )
-from app.modules.authorization.authorization_model import Permission, Role
+from app.modules.authorization.authorization_model import AccountRole, Permission, Role
 from app.modules.authorization.authorization_repository import AuthorizationRepository
 from app.modules.authorization.authorization_schema import PermissionResponse, RoleResponse
 from app.shared.responses.pagination import Page, PaginationParams
 
 logger = get_logger(__name__)
+
+
+def account_ids_with_role(role_id: uuid.UUID) -> Select:
+    """The ids of the accounts holding a role, as a subquery for another
+    feature's list query: `.where(Account.id.in_(account_ids_with_role(role_id)))`.
+
+    Who holds a role is this feature's knowledge; the account list is not.
+    An unknown role simply matches no account.
+    """
+    return select(AccountRole.account_id).where(AccountRole.role_id == role_id)
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +71,13 @@ class AuthorizationService:
         await self._repository.add_role_to_account(
             account_id=account_id, role_id=role.id, granted_by=granted_by
         )
+
+    async def get_role_names_by_account(
+        self, account_ids: Sequence[uuid.UUID]
+    ) -> dict[uuid.UUID, list[str]]:
+        """The role names of several accounts at once, each list sorted by
+        name. An account without roles gets an empty list."""
+        return await self._repository.get_role_names_by_account(account_ids)
 
     async def has_permission(self, account_id: uuid.UUID, code: str) -> bool:
         return await self._repository.account_has_permission(account_id, code)

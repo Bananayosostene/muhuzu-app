@@ -2,7 +2,7 @@ import { ArrowRight, CreditCard, Package, Users, Wallet } from 'lucide-react'
 import { Link } from 'react-router'
 import { useSession } from '@/hooks/use-session'
 import { formatCount, formatDate, formatPrice } from '@/lib/format'
-import { salesOf, useOrders } from '@/services/orders.demo'
+import { demoShop, salesOf, useOrders } from '@/services/orders.demo'
 import { cn } from '@/lib/utils'
 import { PageHeader } from './_components/PageHeader'
 import { RevenueChart } from './_components/RevenueChart'
@@ -27,13 +27,13 @@ export default function DashboardHome() {
   const { items: users } = useUsers()
 
   if (!user) return null
-  // Without `order.manage` the user runs a shop, not the platform.
-  if (!can('order.manage')) {
+  // Someone who cannot confirm payments runs a shop, not the platform.
+  if (!can('payment.verify')) {
     return (
       <SellerOverview
-        name={user.name}
-        sales={salesOf(orders, user.shop, rates.commission)}
-        listings={listings.filter((row) => row.seller === user.shop)}
+        name={user.full_name}
+        sales={salesOf(orders, demoShop, rates.commission)}
+        listings={listings.filter((row) => row.seller === demoShop)}
       />
     )
   }
@@ -46,7 +46,7 @@ export default function DashboardHome() {
   return (
     <>
       <PageHeader
-        title={`Welcome back, ${user.name}`}
+        title={`Welcome back, ${user.full_name}`}
         description={waiting ? `${waiting} ${waiting === 1 ? 'order is' : 'orders are'} waiting for you to confirm payment.` : 'Here is what is happening on Muhuze today.'}
       />
       <div className="stagger grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

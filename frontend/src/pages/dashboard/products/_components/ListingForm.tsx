@@ -1,59 +1,91 @@
-import { toast } from 'sonner'
-import { typeLabels } from '@/lib/format'
-import { isProductType, productTypes } from '@/types/product'
-import { Field, FormDialog, SelectField } from '../../_components/FormDialog'
-import { useListings, type StoredListing } from '../_data'
+import { useState, type ReactNode } from 'react'
+import { Field, SelectField } from '@/components/shared/FormField'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
+import type { Category } from '@/types/category'
+import type { OwnProduct, ProductInput } from '@/types/product'
+import { readAttributes } from '../attributes'
+import { AttributeFields } from './AttributeFields'
 
 interface Props {
-  /** A listing to edit, 'new' to create one, or null when closed. */
-  target: StoredListing | 'new' | null
-  /** Set for a seller: the listing belongs to this shop and the seller field is not shown. */
-  shop?: string
+  open: boolean
+  /** The listing being edited; undefined for a new one. */
+  product?: OwnProduct
+  /** The seller's categories that can take products, each with its attributes. */
+  categories: Category[]
+  pending: boolean
+  onSubmit: (input: ProductInput) => void
   onClose: () => void
+  /** The pictures section; only an existing listing can have pictures. */
+  children?: ReactNode
 }
 
-export function ListingForm({ target, shop, onClose }: Props) {
-  const { add, update } = useListings()
-  const listing = target === 'new' ? null : target
-
-  function save(data: FormData) {
-    const type = data.get('type')
-    const values = {
-      title: String(data.get('title')),
-      type: isProductType(type) ? type : 'sale',
-      category: String(data.get('category')),
-      price: Number(data.get('price')),
-      unit: String(data.get('unit')) || undefined,
-      seller: shop ?? String(data.get('seller')),
-      image: String(data.get('image')),
-    }
-    if (listing) update(listing.id, values)
-    else add({ ...values, views: 0, uses: 0, active: true })
-    toast.success(listing ? 'Listing updated' : 'Listing created')
-  }
+/** Create or edit a listing. Stays open with what was typed when saving fails. */
+export function ListingForm({ open, product, categories, pending, onSubmit, onClose, children }: Props) {
+  const [categoryId, setCategoryId] = useState(product?.category_id ?? '')
+  const category = categories.find((item) => item.id === categoryId)
+  // A switched-off attribute can no longer be set.
+  const attributes = category?.attributes.filter((attribute) => attribute.is_active) ?? []
 
   return (
-    <FormDialog
-      open={target !== null}
-      onClose={onClose}
-      title={listing ? 'Edit listing' : 'New listing'}
-      description="Sale items earn commission; rentals and services rely on subscriptions."
-      onSubmit={save}
-    >
-      <Field label="Title" name="title" defaultValue={listing?.title} required />
-      <div className="grid grid-cols-2 gap-4">
-        <SelectField
-          label="Type"
-          name="type"
-          defaultValue={listing?.type}
-          options={productTypes.map((type) => ({ value: type, label: typeLabels[type].name }))}
-        />
-        <Field label="Category" name="category" defaultValue={listing?.category} required />
-        <Field label="Price (RWF)" name="price" type="number" min={0} defaultValue={listing?.price} required />
-        <Field label="Per (rentals, services)" name="unit" placeholder="month, day, session" defaultValue={listing?.unit} />
-      </div>
-      {!shop && <Field label="Seller" name="seller" defaultValue={listing?.seller} required />}
-      <Field label="Image URL" name="image" type="url" defaultValue={listing?.image} />
-    </FormDialog>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-2xl">
+        <form
+          className="grid gap-5"
+          onSubmit={(event) => {
+            event.preventDefault()
+            const data = new FormData(event.currentTarget)
+            onSubmit({
+              name: String(data.get('name')).trim(),
+              description: String(data.get('description')).trim() || null,
+              price: String(data.get('price')),
+              category_id: categoryId,
+              attributes: readAttributes(data, attributes),
+            })
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>{product ? 'Edit listing' : 'New listing'}</DialogTitle>
+            <DialogDescription>
+              {product ? 'Changes are saved to the listing straight away.' : 'It is saved as a draft. Add pictures next, then switch it to visible.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {product && product.publish_blockers.length > 0 && (
+            <p className="rounded-xl border border-highlight/50 bg-highlight/15 p-3 text-sm">
+              Before it can be visible: {product.publish_blockers.join('; ')}.
+            </p>
+          )}
+
+          <Field label="Title" name="name" maxLength={200} defaultValue={product?.name} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <SelectField
+              label="Category"
+              name="category_id"
+              options={Object.fromEntries(categories.map((item) => [item.id, item.name]))}
+              value={categoryId}
+              onChange={(event) => setCategoryId(event.target.value)}
+            />
+            <Field label="Price (RWF)" name="price" type="number" min={1} step="0.01" defaultValue={product && Number(product.price)} />
+          </div>
+          <Field label="Description (optional)" name="description" required={false} maxLength={20000} defaultValue={product?.description ?? ''} />
+
+          {attributes.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {/* Values belong to a category: they start empty when another one is chosen. */}
+              <AttributeFields key={categoryId} attributes={attributes} values={categoryId === product?.category_id ? product.attributes : undefined} />
+            </div>
+          )}
+
+          {children}
+
+          <DialogFooter showCloseButton>
+            <Button type="submit" disabled={pending}>{pending ? 'Saving…' : 'Save'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

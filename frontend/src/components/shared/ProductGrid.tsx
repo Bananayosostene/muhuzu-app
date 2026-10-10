@@ -2,31 +2,14 @@ import { ChevronRight, PackageSearch } from 'lucide-react'
 import { Link } from 'react-router'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatPrice } from '@/lib/format'
-import { productTypes, type Product, type ProductType } from '@/types/product'
+import type { ProductSummary } from '@/types/product'
 
 const grid = 'grid gap-4 sm:grid-cols-2 xl:grid-cols-4'
 const PANEL_SIZE = 4
+const titles = ['Fresh picks', 'More to explore', 'Keep browsing', 'You may also like']
 
-const titles: Record<ProductType, string> = {
-  sale: 'Top picks to buy',
-  rental: 'Ready to rent',
-  service: 'Services to book',
-}
-
-/** Splits the listings by type into panels of four, so every listing stays visible. */
-function panels(products: Product[]) {
-  return productTypes.flatMap((type) => {
-    const items = products.filter((product) => product.type === type)
-    return Array.from({ length: Math.ceil(items.length / PANEL_SIZE) }, (_, index) => ({
-      type,
-      title: index ? `More: ${titles[type].toLowerCase()}` : titles[type],
-      items: items.slice(index * PANEL_SIZE, (index + 1) * PANEL_SIZE),
-    }))
-  })
-}
-
-/** Pass `undefined` while loading. */
-export function ProductGrid({ products, empty }: { products?: Product[]; empty: string }) {
+/** Listings as panels of four pictures. Pass `undefined` while loading. */
+export function ProductGrid({ products, empty }: { products?: ProductSummary[]; empty: string }) {
   if (!products) {
     return (
       <div className={grid}>
@@ -44,26 +27,22 @@ export function ProductGrid({ products, empty }: { products?: Product[]; empty: 
     )
   }
 
+  const panels = Array.from({ length: Math.ceil(products.length / PANEL_SIZE) }, (_, index) =>
+    products.slice(index * PANEL_SIZE, (index + 1) * PANEL_SIZE))
+
   return (
     <div className={`${grid} stagger`}>
-      {panels(products).map((panel) => (
-        <section key={panel.title} className="rounded-2xl border bg-card p-4">
-          <Link to={`/products?type=${panel.type}`} className="mb-3 flex items-center justify-between gap-2 hover:text-primary">
-            <h3 className="font-heading text-lg leading-tight font-bold">{panel.title}</h3>
+      {panels.map((items, index) => (
+        <section key={items[0].id} className="rounded-2xl border bg-card p-4">
+          <Link to="/products" className="mb-3 flex items-center justify-between gap-2 hover:text-primary">
+            <h3 className="font-heading text-lg leading-tight font-bold">{titles[index % titles.length]}</h3>
             <ChevronRight className="size-5 shrink-0" />
           </Link>
           <div className="grid grid-cols-2 gap-3">
-            {panel.items.map((product) => (
+            {items.map((product) => (
               <Link key={product.id} to={`/products/${product.id}`} className="group min-w-0">
-                <img
-                  src={product.image}
-                  alt=""
-                  width={320}
-                  height={320}
-                  loading="lazy"
-                  className="aspect-square w-full rounded-xl bg-muted object-cover"
-                />
-                <p className="mt-1.5 truncate text-sm group-hover:text-primary">{product.title}</p>
+                <ProductImage src={product.main_image_url} className="aspect-square w-full rounded-xl" />
+                <p className="mt-1.5 truncate text-sm group-hover:text-primary">{product.name}</p>
                 <p className="text-sm font-semibold text-primary">{formatPrice(product.price)}</p>
               </Link>
             ))}
@@ -72,4 +51,10 @@ export function ProductGrid({ products, empty }: { products?: Product[]; empty: 
       ))}
     </div>
   )
+}
+
+/** A product picture, or a plain block for a product that has none. */
+export function ProductImage({ src, className }: { src: string | null; className: string }) {
+  if (!src) return <div className={`bg-muted ${className}`} />
+  return <img src={src} alt="" width={320} height={320} loading="lazy" className={`bg-muted object-cover ${className}`} />
 }

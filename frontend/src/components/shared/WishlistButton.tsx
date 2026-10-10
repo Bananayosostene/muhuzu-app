@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { useWishlist } from '@/hooks/use-wishlist'
 import { cn } from '@/lib/utils'
 
-export function WishlistButton({ id, className }: { id: number; className?: string }) {
+export function WishlistButton({ id, className }: { id: string; className?: string }) {
   const { ids, toggle } = useWishlist()
   const saved = ids.includes(id)
 

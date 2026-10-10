@@ -1,41 +1,48 @@
-import { api, API_URL } from '@/lib/api'
+import { api, ApiError, getRefreshToken, hasRefreshToken, setTokens } from '@/lib/api'
 import type { User } from '@/types/user'
 
-// Until the backend is connected (VITE_API_URL unset), demo users are used so the UI can be developed.
-// The dashboard can switch between them to show what each set of permissions sees.
-const demoUsers = {
-  Admin: {
-    id: 1,
-    name: 'Demo Admin',
-    email: 'admin@muhuze.app',
-    role: 'Admin',
-    referralCode: 'DEMO2026',
-    permissions: [
-      'dashboard.view', 'product.manage', 'order.manage', 'subscription.manage',
-      'referral.view', 'wallet.view', 'user.manage', 'role.manage',
-    ],
-  },
-  Seller: {
-    id: 2,
-    name: 'Eric Mugisha',
-    email: 'eric@kigalimobile.rw',
-    role: 'Seller',
-    shop: 'Kigali Mobile',
-    referralCode: 'ERIC2026',
-    permissions: ['dashboard.view', 'product.own', 'order.own', 'subscription.own', 'referral.view', 'wallet.own'],
-  },
-} satisfies Record<string, User>
+type Account = Pick<User, 'id' | 'email' | 'full_name'>
+type Access = Pick<User, 'roles' | 'permissions'>
 
-export type DemoRole = keyof typeof demoUsers
+interface Credentials {
+  email: string
+  password: string
+}
 
-const KEY = 'demo-role'
+/** The signed-in user, or `null` for a visitor. */
+export async function getMe(): Promise<User | null> {
+  if (!hasRefreshToken()) return null
+  try {
+    const [account, access] = await Promise.all([api<Account>('/auth/me'), api<Access>('/authorization/me')])
+    return { ...account, ...access }
+  } catch (error) {
+    // The session ended (expired, or closed from another device): treat as a visitor.
+    if (error instanceof ApiError && error.status === 401) return null
+    throw error
+  }
+}
 
-/** Empty once the backend is connected: the real user comes from the API. */
-export const demoRoles: DemoRole[] = API_URL ? [] : ['Admin', 'Seller']
+export async function login(json: Credentials) {
+  setTokens(await api('/auth/login', { method: 'POST', json }))
+}
 
-const demoRole = (): DemoRole => (localStorage.getItem(KEY) === 'Seller' ? 'Seller' : 'Admin')
+export async function logout() {
+  const refresh_token = getRefreshToken()
+  setTokens(null)
+  if (refresh_token) await api('/auth/logout', { method: 'POST', json: { refresh_token } })
+}
 
-export const setDemoRole = (role: DemoRole) => localStorage.setItem(KEY, role)
+export const register = (json: Credentials & { full_name: string; phone?: string }) =>
+  api('/auth/register', { method: 'POST', json })
 
-export const getMe = (): Promise<User> =>
-  API_URL ? api<User>('/auth/me') : Promise.resolve(demoUsers[demoRole()])
+export const requestCode = (email: string) =>
+  api('/auth/email/verification/request', { method: 'POST', json: { email } })
+
+export const confirmEmail = (json: { email: string; code: string }) =>
+  api('/auth/email/verification/confirm', { method: 'POST', json })
+
+export const forgotPassword = (email: string) =>
+  api('/auth/password/forgot', { method: 'POST', json: { email } })
+
+export const resetPassword = (json: { token: string; new_password: string }) =>
+  api('/auth/password/reset', { method: 'POST', json })

@@ -8,17 +8,16 @@ import type { User } from '@/types/user'
 import { features, links } from './nav'
 import { ProfileMenu } from './ProfileMenu'
 import { SearchBar } from './SearchBar'
-import { ShopsMenu } from './ShopsMenu'
 
 interface HeaderProps {
-  shops: string[]
   user?: User
   showDashboard: boolean
   wishlistCount: number
   cartCount: number
+  onSignOut: () => void
 }
 
-export function Header({ shops, user, showDashboard, wishlistCount, cartCount }: HeaderProps) {
+export function Header({ user, showDashboard, wishlistCount, cartCount, onSignOut }: HeaderProps) {
   const counters = [
     { to: '/wishlist', label: 'Wishlist', icon: Heart, count: wishlistCount },
     { to: '/cart', label: 'Cart', icon: ShoppingCart, count: cartCount },
@@ -43,7 +42,9 @@ export function Header({ shops, user, showDashboard, wishlistCount, cartCount }:
               )}
             </Link>
           ))}
-          {user && <ProfileMenu user={user} showDashboard={showDashboard} />}
+          {user
+            ? <ProfileMenu user={user} showDashboard={showDashboard} onSignOut={onSignOut} />
+            : <Link to="/login" className={cn(buttonVariants({ size: 'lg' }), 'ml-1 rounded-full px-5')}>Sign in</Link>}
         </div>
       </div>
       <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 pb-2 text-sm/[18px]">
@@ -57,7 +58,6 @@ export function Header({ shops, user, showDashboard, wishlistCount, cartCount }:
               {link.label}
             </NavLink>
           ))}
-          {shops.length > 0 && <ShopsMenu shops={shops} />}
         </nav>
         <ul className="ml-auto flex gap-5 pl-4">
           {features.map(({ icon: Icon, title, text }) => (

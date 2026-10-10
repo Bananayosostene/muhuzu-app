@@ -30,21 +30,39 @@ These are UI rules. The roles, permissions, and ownership rules themselves are d
 
 There is exactly one dashboard and one sidebar in the codebase, not one per role.
 
-### Platform scope and own scope
+### Permission codes
 
-Two kinds of permission decide what a dashboard user sees:
+The codes are the backend's (`GET /authorization/me`), listed in each `backend/app/modules/*/*_permissions.py`. There is no "can open the dashboard" permission: holding any code in `lib/dashboard-access.ts` opens it, and each sidebar link names the codes that open its page (`permissions: ['product.manage', 'product.moderate']`). A seller's codes cover only their own shop (`product.manage`, `seller_order.manage`, `wallet.read_own`…); staff codes cover the platform (`payment.verify`, `product.moderate`, `revenue.read`…).
 
-- `*.manage` / `wallet.view` — the whole platform (admin): every listing, every order, plans and rates, the platform wallet, users and roles.
-- `*.own` — only what belongs to the user's shop (seller): `product.own`, `order.own`, `subscription.own`, `wallet.own`.
+### Signing in
 
-A sidebar link lists the permissions that open it (`permissions: ['product.manage', 'product.own']`). Pages shared by both scopes (Overview, Products, Orders) check the platform permission and otherwise narrow to `user.shop`.
+- The API client (`lib/api.ts`) keeps the access token in memory and the refresh token in `localStorage`, and refreshes on a `401`. **Only one refresh may run at a time** (a second use of an old refresh token signs the account out everywhere), so it is serialised within the tab and, through a Web Lock, across tabs.
+- `useSession()` gives `user` (`null` for a visitor), `can(code)`, `reload()` after signing in, and `signOut()`.
+- Pages that need an account sit under `layouts/RequireAuth.tsx`, which sends a visitor to `/login?next=…`.
 
-### Order flow
+### Becoming a seller (README §15, backend `docs/features/004_sellers.md`)
 
-1. A buyer checks out and gets an order reference. Nothing is paid in the app.
-2. The buyer sends the money to the Muhuze account, outside the app, from the number they gave.
-3. An admin sees every order and marks it **Payment received** (approved).
-4. Only then do the sellers of the ordered items see the order, and its amount (minus commission on sale products) counts in their wallet.
+1. Any signed-in account applies once at `/sell`: shop name and phone, identity document type and number, location. The application starts as a **draft**.
+2. They upload the identity document (front, and back unless it is a passport); business registration and TIN are optional. Files are private: the page asks for a five-minute link each time one is opened.
+3. **Send for review** works once nothing required is missing. While it waits, nothing can be edited.
+4. Staff approve or reject with a reason. A rejected application is edited and sent again; it is never deleted.
+5. Approval makes the seller **active** and gives the account the `seller` role. Only an active seller may trade: the UI never treats the role as "can sell now", because a suspended or closed shop keeps the role.
+
+### Products (README §7, backend `docs/features/007_products.md`)
+
+- A listing belongs to one shop and sits in one of **that shop's own** categories; a category defines the details (attributes) its products carry.
+- A new listing is a **draft**. To go on sale it needs an active category, every required detail, and at least one picture; the edit form shows what is still missing (`publish_blockers`).
+- There is no approval step and no stock: a published listing is on sale at once, and its seller archives it when it is not available. Only a draft that was never published can be deleted.
+- The dashboard's **Visible** switch keeps the original table design over the backend's statuses: for a seller it publishes or archives; for staff it restores or hides. A listing staff hid cannot be published by its seller.
+- Buyers see a listing only when it is published, not hidden, in an active category, and its shop is open. Otherwise it is "not found".
+
+### Order flow (README §8–§11)
+
+0. Before anything can be ordered, staff must have set the default commission rate and at least one visible receiving account (dashboard Commission and Payment accounts; the dashboard warns while either is missing).
+1. The cart lives on the device (README §20 `X8`). Checkout sends product ids and quantities with the delivery details; the backend reads every price and returns the order with its totals.
+2. The order page shows MUHUZE's receiving accounts. Orders are **prepaid only**: mobile money, merchant code or bank transfer, never cash on delivery (README §20 `P8`). The buyer pays outside the app, then submits the transaction reference and the number they paid from.
+3. Staff with `payment.verify` confirm or reject it on the dashboard's Payments page.
+4. Only then does each shop see its part (dashboard Orders): accept or reject, ship, deliver. The buyer confirms receipt on the order page.
 
 ---
 
@@ -52,7 +70,7 @@ A sidebar link lists the permissions that open it (`permissions: ['product.manag
 
 The features and their rules are listed in the root README. Building a screen for a feature means following the README's confirmed rules for it.
 
-The demo UI built so far (section 9) also shows ideas that are **not yet confirmed** in the README: multiple product types (sale/rental/service), contact hiding tied to subscriptions, an admin wallet, referral earnings for every user, engagement counters, and languages. These are tracked in README §20 as `X1`–`X7`. Don't extend them further until they're decided, and change the UI to match whatever is decided.
+Some screens built before the backend existed showed ideas that are **not confirmed** in the README (`X1`–`X7`): product types (sale/rental/service), contact hiding tied to subscriptions, referrals, view and usage counters, location search. The storefront no longer shows them, because the backend has no data for them. The dashboard pages still marked as demo (section 9) do; change them to match whatever is decided when each is connected.
 
 UI principles that still apply whatever is decided:
 
@@ -189,45 +207,62 @@ Business questions (referrer earnings, referral funding, buying flow, languages,
 - [x] shadcn/ui initialised (Base UI style: use the `render` prop, not `asChild`)
 - [x] Theme tokens in `src/index.css`: emerald primary, amber `highlight`, Roboto, light and dark
 - [x] Router with lazy routes, `PublicLayout` and `DashboardLayout`
-- [x] API client (`lib/api.ts`) and TanStack Query provider
-- [x] `useSession` hook with `can(permission)`; permission-driven sidebar and topbar
+- [x] API client (`lib/api.ts`): unwraps the response envelope, throws `ApiError` with the backend's message, bearer token with single-flight refresh, `Page<T>`; TanStack Query provider
+- [x] `useSession` hook on `GET /auth/me` + `GET /authorization/me`, with `can(permission)`; permission-driven sidebar and topbar
+- [x] Auth pages: sign in, register, confirm email (six-digit code), forgot password, reset password (`/reset-password?token=`)
 - [x] Dashboard shell: grouped sidebar with user menu, topbar with dark-mode toggle and notifications, per-page permission guard
-- [x] Dashboard pages on demo data: Overview (stats, revenue chart), Products, Subscriptions (rates, plans, sellers), Referrals, Wallet, Users, Roles & permissions
-- [x] Orders: admin sees all and approves payment; sellers see their items from approved orders
-- [x] Seller dashboard: overview with earnings chart, own products (add, edit, delete), My subscription (plans and subscribe request), My wallet (balance from approved orders)
-- [x] Storefront seller collection: `/products?seller=`, linked from the seller card on a product page and from the "Shops" menu in the header
+- [x] Dashboard pages **still on demo data** (flagged `demo` in the sidebar, with a notice on the page): Overview, Referrals
+- [x] Dashboard Payments (staff, `payment.verify`): confirm or reject reported payments. Dashboard Orders (seller, `seller_order.manage`): accept, reject, ship, deliver, with the delivery details and earnings of each order
+- [x] Dashboard Orders, staff (`order.read`): every order from the moment it is placed, by status, with each shop's part and money split
+- [x] Dashboard My wallet (seller, `wallet.read_own`): on the way, ready to withdraw, total earned, withdrawn, and every movement of the ledger
+- [x] Dashboard Wallet (staff, `revenue.read`): commission income and totals, the revenue record of each sale, and any seller's balances (`wallet.read`)
+- [x] Dashboard Roles & permissions (`role.read`; changes need `role.manage`): role cards with what each holds; create, rename, delete, and tick permissions from the backend's catalog. System roles keep their name, and the admin role always holds everything
+- [x] Dashboard Users (`account.read`): every account with its roles; search by name or email and filter by role, both done by the backend; change an account's roles from the live list of roles (`role.assign`)
+- [x] Dashboard Subscriptions (staff): plans (`seller_plan.manage`) — create, edit, offer or retire, delete; sellers' requests and subscriptions (`seller_subscription.manage`) — record payment to activate, decline, end
+- [x] Dashboard My subscription (seller, `seller_subscription.request`): the commission paid now and why, plans on offer, request one, withdraw a pending request
+- [x] Dashboard Payment accounts (staff, `payment_destination.manage`): MUHUZE's receiving accounts (add, edit, show or hide, default, delete)
+- [x] Dashboard Commission (staff, `default_commission_rate.manage`): the default commission rate, with a note, and the history of every rate set
+- [x] Dashboard setup warnings on every page, for staff who can fix them: commission rate not set, no visible payment account
+- [x] Dashboard Products, seller (`product.manage`): own listings in any status, add and edit (category, price, description, the category's details, pictures), the **Visible** switch publishes or archives, delete a never-published draft
+- [x] Dashboard Products, staff (`product.moderate`): every shop's listings; the **Visible** switch hides or restores one
+- [x] Dashboard Categories (seller, `category.manage`): the shop's categories and the details (attributes) products in each carry
+- [x] Storefront: a shop's listings can be narrowed to one of its categories
+- [x] Become a seller (`/sell`, signed in): the application (shop, identity, location with optional GPS), private documents, send for review, and what each status means; close and reopen an approved shop
+- [x] Dashboard Sellers (staff, `seller.read`): the review queue and every seller by status; open an application and its documents; approve or reject (`seller.review`), suspend or reinstate (`seller.suspend`)
+- [x] Storefront shop listings: `/products?seller_id=`, linked from the seller card on a product page
 - [x] Dashboard building blocks in `pages/dashboard/_components`: `DataTable`, `FormDialog`, `RowActions`, `StatCard`, `StatusBadge`, `PageHeader`
-- [x] Marketplace header: search, wishlist count, type links, trust highlights, profile menu (email, referral link, theme, dashboard)
+- [x] Marketplace header: search, wishlist and cart counts, sort links, trust highlights, Sign in button or profile menu (email, dashboard, my orders, theme, log out)
 - [x] Footer with brand, the same links as the header, and social links
-- [x] Home page: animated 3D hero, tall category picture cards, trending panels, most-sold products carousel
-- [x] Products: browse page (search + type filter) and detail page with locked seller contact
-- [x] Hero: location search (`/products?location=`), statistics that count up in three seconds
-- [x] Cart (saved in the browser): buy button on the detail page, header cart icon, `/cart` page
-- [x] Checkout (`/checkout`): receiver, delivery address (province, district, sector, cell) and the number the buyer pays from; confirmation with an order reference
+- [x] Home page on `GET /products`: animated 3D hero, newest products as tall picture cards and panels, lowest-priced products carousel
+- [x] Products: browse page (search, shop filter, price sort, pages) and detail page (pictures, details, shop)
+- [x] Hero: product search (`/products?q=`), statistics that count up in three seconds
+- [x] Cart (saved in the browser, with quantities 1–999): button on the detail page, header cart icon, `/cart` page with an estimated total
+- [x] Checkout (`/checkout`, signed in): delivery details, `POST /orders`
+- [x] My orders (`/orders`) and the order page (`/orders/:id`): each shop's part and status, how to pay, report a payment, cancel while unpaid, confirm receipt
 - [x] Route error screen (`pages/error.tsx`): reloads once when a page file is out of date, otherwise offers a reload
-- [x] Wishlist (saved in the browser), view and usage counters on the detail page
+- [x] Wishlist (saved in the browser)
 - [x] Animation system in `src/index.css`: `animate-float`, `animate-blob`, `animate-rise`, `reveal` (scroll), `stagger`
 
-### Temporary — remove when the backend is connected
-- `lib/api.ts` returns the raw response body and throws `status statusText` on errors. It must unwrap the `{ success, data, message, status_code }` envelope and surface `message` once it calls the real backend.
-- `services/auth.ts` returns a demo admin or a demo seller while `VITE_API_URL` is not set; the Admin / Seller switch in the dashboard topbar (`RoleSwitch`) swaps them and disappears once the API is connected.
-- Permission names (`dashboard.view`, `product.manage`…) and the `/auth/me` endpoint are placeholders until the backend list is known.
-- Dashboard pages keep their data in memory through `lib/demo-store.ts` (`_data.ts` files); changes are lost on reload. Replace each store with API queries and mutations.
-- Dashboard listings are not linked to the storefront listings yet.
-- The header "Shops" list comes from the demo listings; `GET /shops` is a placeholder endpoint.
-- `services/products.demo.ts` supplies demo listings (Unsplash photos) while `VITE_API_URL` is not set.
-- The wishlist and the cart are stored in `localStorage` (`lib/id-store.ts`) until backend endpoints exist.
-- `services/orders.ts` adds checkout orders to the in-memory list in `services/orders.demo.ts` while `VITE_API_URL` is not set (lost on reload); `POST /orders` is a placeholder endpoint. Dashboard pages read that list directly.
-- A seller is matched to listings, orders and subscriptions by shop name (`user.shop`); the backend should scope these by the signed-in user instead.
-- Listing locations are demo towns; the location search matches the typed text, not real distance.
+### Temporary
+- The dashboard pages flagged `demo` keep their data in memory through `lib/demo-store.ts` (`_data.ts` files, `services/products.demo.ts`, `services/orders.demo.ts`) and show one demo shop. Connect each to its backend API, then delete the demo files with the last of them.
+- Dashboard tables load one page of 100 rows (the backend's maximum) and page through it in the browser. Move `DataTable` to server-side pages before a list can outgrow that.
+- Development reaches the backend through the Vite proxy (`/api` → `http://localhost:8000`) because the backend sends no CORS headers. Production must serve both from one origin, or the backend must allow the frontend's origin.
 - Footer social links point to `#` until the real Muhuze accounts are known.
-- The referral code (`DEMO2026`) comes from the demo user; the `/r/:code` landing route does not exist yet.
-- Hero statistics (15K+ products…) and the floating chips are placeholder numbers.
+- Hero statistics (15K+ products…) are placeholder numbers, not backend figures.
+
+### Not in the backend yet (the storefront does not show these)
+- A public list of shops, for a "Shops" menu: `GET /sellers` is staff-only.
+- Filtering products by place: products carry no location.
+- Product types, view and sold counters, referrals, server-side wishlist (README §20 `X1`–`X7`).
+- Creating an account for someone else, and suspending or deleting one: the Users page has no Add, Suspend or Delete.
+- Where a seller pays for a plan: MUHUZE's receiving accounts are shown only on a buyer's order, and a plan request carries no payment details. Staff activate it after checking the payment by hand.
+- Error codes and per-field validation errors (README §20 `I3`): an unverified login is recognised by its message, and form errors are shown as one toast.
 
 ### Next
-- [ ] Auth pages (login, register) once the backend auth method is known
-- [ ] Connect dashboard pages to the backend, one resource at a time
-- [ ] Paying sellers out (settlements against a seller wallet)
+- [ ] Categories: rename an attribute, add or retire its options after creation; staff hide and restore (`category.moderate`)
+- [ ] Withdrawals: a seller's payout accounts and requests, and staff review (`/withdrawals`, `/withdrawal/destinations`)
+- [ ] Staff: a seller's status history; assign a plan to a seller directly; give a single permission directly to an account
+- [ ] Account settings: change password, sessions
 
 ### Later
 - [ ] Referral registration through a shared link
@@ -247,3 +282,12 @@ Business questions (referrer earnings, referral funding, buying flow, languages,
 | 2026-10-06 | Font changed to Roboto (Inter and Plus Jakarta Sans removed); hero and header restyled to the light editorial look |
 | 2026-10-06 | Listings shown as panels of four pictures (`ProductGrid`); category picture cards on the home page; no zoom on product pictures |
 | 2026-10-06 | Admin and seller dashboards: platform/own permissions, orders with admin approval, seller overview, subscription, wallet and storefront collection |
+| 2026-10-10 | Backend connected: API client, authentication, storefront products, checkout, orders and payment reporting, staff payment confirmation, seller orders. Remaining dashboard pages flagged as demo |
+| 2026-10-10 | Seller onboarding connected: `/sell` for the applicant, dashboard Sellers for staff review. Shared `FormField` and `RegionFields` |
+| 2026-10-10 | Products connected: seller listings and categories, staff moderation, shop category filter on the storefront |
+| 2026-10-10 | Cart quantities; staff Payment accounts page with the default commission rate |
+| 2026-10-10 | Commission moved to its own page with history; setup warnings in the dashboard |
+| 2026-10-10 | Staff view of all orders on the dashboard Orders page |
+| 2026-10-10 | Wallets connected: the seller's wallet and ledger, staff revenue and seller balances |
+| 2026-10-10 | Roles & permissions and subscriptions (plans, requests, the seller's side) connected |
+| 2026-10-10 | Users page connected, on a new backend endpoint `GET /accounts` (see backend `docs/features/003_roles_and_permissions.md`) |

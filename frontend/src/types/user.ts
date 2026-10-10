@@ -1,10 +1,8 @@
+/** The signed-in account with what it may do (`GET /auth/me` + `GET /authorization/me`). */
 export interface User {
-  id: number
-  name: string
+  id: string
   email: string
-  role: string
-  /** Shop name, when the user sells on Muhuze. */
-  shop?: string
-  referralCode: string
+  full_name: string
+  roles: string[]
   permissions: string[]
 }

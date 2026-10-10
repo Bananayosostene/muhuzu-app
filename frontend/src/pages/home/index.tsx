@@ -1,22 +1,21 @@
 import { useProducts } from '@/hooks/use-products'
-import { BestSellers } from './_components/BestSellers'
-import { CategoryCards } from './_components/CategoryCards'
+import { BestPrices } from './_components/BestPrices'
+import { FeaturedCards } from './_components/FeaturedCards'
 import { Hero } from './_components/Hero'
 import { Trending } from './_components/Trending'
 
-// One listing per product type for the hero: a phone, a house and a service.
-const heroIds = [1, 7, 10]
-
 export default function Home() {
-  const { data: products } = useProducts()
-  const featured = heroIds.flatMap((id) => products?.find((p) => p.id === id) ?? [])
+  // Newest first is the backend's default order.
+  const { data: newest } = useProducts({ page_size: 16 })
+  const { data: cheapest } = useProducts({ sort: 'price', page_size: 12 })
+  const products = newest?.items
 
   return (
     <main className="flex-1">
-      <Hero products={featured} />
-      <CategoryCards products={products ?? []} />
-      <Trending products={products} />
-      <BestSellers products={products ?? []} />
+      <Hero products={products?.filter((product) => product.main_image_url).slice(0, 3) ?? []} />
+      <FeaturedCards products={products?.slice(0, 8) ?? []} />
+      <Trending products={products?.slice(8)} />
+      <BestPrices products={cheapest?.items ?? []} />
     </main>
   )
 }

@@ -1,8 +1,10 @@
 import { createStore, type Stored } from '@/lib/demo-store'
-import type { DeliveryDetails } from '@/types/order'
 import type { ProductType } from '@/types/product'
 
-// Demo orders used only while VITE_API_URL is unset. Delete with the backend connection.
+// Demo orders for the dashboard pages that are not connected to the backend yet. Delete with the last of them.
+
+/** The shop those pages show as the seller's own. */
+export const demoShop = 'Kigali Mobile'
 
 export interface OrderItem {
   title: string
@@ -11,7 +13,14 @@ export interface OrderItem {
   price: number
 }
 
-interface OrderRecord extends DeliveryDetails {
+interface OrderRecord {
+  name: string
+  phone: string
+  province: string
+  district: string
+  sector: string
+  cell: string
+  paymentPhone: string
   reference: string
   date: string
   /** Set by an admin once the money has arrived outside the app. */
@@ -57,7 +66,7 @@ export interface Sale extends OrderItem {
 }
 
 /** Approved sales of one shop. Commission (in percent) is only taken from sale products. */
-export const salesOf = (orders: StoredOrder[], shop: string | undefined, commission: number): Sale[] =>
+export const salesOf = (orders: StoredOrder[], shop: string, commission: number): Sale[] =>
   orders.filter((row) => row.approved).flatMap((row) =>
     row.items.flatMap((line, index) => {
       if (line.seller !== shop) return []

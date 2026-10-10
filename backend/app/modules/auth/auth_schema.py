@@ -6,10 +6,12 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 from app.core.security import OTP_LENGTH
 from app.modules.auth.auth_constants import (
+    ACCOUNT_SEARCH_MAX_LENGTH,
     FULL_NAME_MAX_LENGTH,
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
     PHONE_PATTERN,
+    AccountStatus,
 )
 
 NewPassword = Annotated[
@@ -50,6 +52,30 @@ class AccountResponse(BaseModel):
     status: str = Field(description="active | suspended | deactivated")
     is_verified: bool = Field(description="Whether the email address has been verified")
     created_at: datetime
+
+
+class AccountSummaryResponse(BaseModel):
+    """One row of the staff account list."""
+
+    id: uuid.UUID
+    email: str
+    phone: str | None
+    full_name: str
+    status: AccountStatus
+    is_verified: bool = Field(description="Whether the email address has been verified")
+    created_at: datetime
+    roles: list[str] = Field(description="Names of the roles the account holds, by name")
+
+
+class AccountListFilters(BaseModel):
+    q: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=ACCOUNT_SEARCH_MAX_LENGTH,
+        description="Search in the full name and the email (contains, case-insensitive)",
+    )
+    role_id: uuid.UUID | None = Field(default=None, description="Only accounts holding this role")
+    status: AccountStatus | None = Field(default=None, description="Only accounts in this status")
 
 
 class EmailVerificationRequest(BaseModel):

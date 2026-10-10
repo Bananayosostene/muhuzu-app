@@ -6,10 +6,10 @@ import {
 } from '@/components/ui/sidebar'
 import { useSession } from '@/hooks/use-session'
 import type { User } from '@/types/user'
-import { navGroups } from './nav'
+import { isOpenTo, navGroups } from './nav'
 import { UserMenu } from './UserMenu'
 
-export function AppSidebar({ user }: { user: User }) {
+export function AppSidebar({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   const { can } = useSession()
   const pathname = useLocation().pathname.replace(/\/$/, '')
 
@@ -20,7 +20,7 @@ export function AppSidebar({ user }: { user: User }) {
       </SidebarHeader>
       <SidebarContent>
         {navGroups.map((group) => {
-          const items = group.items.filter((item) => item.permissions.some(can))
+          const items = group.items.filter((item) => isOpenTo(item, can))
           if (!items.length) return null
           return (
             <SidebarGroup key={group.label}>
@@ -45,7 +45,7 @@ export function AppSidebar({ user }: { user: User }) {
         })}
       </SidebarContent>
       <SidebarFooter className="border-t">
-        <UserMenu user={user} />
+        <UserMenu user={user} onSignOut={onSignOut} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

@@ -21,3 +21,6 @@ FULL_NAME_MAX_LENGTH = 150
 PHONE_PATTERN = r"^\+[1-9]\d{7,14}$"
 
 USER_AGENT_MAX_LENGTH = 255
+
+# The staff account list's `q` parameter.
+ACCOUNT_SEARCH_MAX_LENGTH = 100
