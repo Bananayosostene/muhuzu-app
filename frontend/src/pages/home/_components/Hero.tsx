@@ -1,7 +1,6 @@
 import type { ProductSummary } from '@/types/product'
 import { CountUp } from './CountUp'
 import { HeroScene } from './HeroScene'
-import { HeroSearch } from './HeroSearch'
 
 const stats = [
   { value: 15_000, suffix: '+', label: 'Products' },
@@ -23,7 +22,6 @@ export function Hero({ products }: { products: ProductSummary[] }) {
           <p className="mx-auto mt-5 max-w-md text-lg font-light text-muted-foreground md:mx-0">
             Phones, houses, cars and skilled people in one place. Share with friends and earn on every deal.
           </p>
-          <HeroSearch />
           <dl className="mt-10 flex flex-wrap justify-center gap-x-8 gap-y-4 md:justify-start">
             {stats.map((stat) => (
               <div key={stat.label}>

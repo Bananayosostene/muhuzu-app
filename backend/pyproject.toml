@@ -37,3 +37,9 @@ line-length = 100
 select = ["E", "F", "W", "I", "B", "UP", "BLE", "S110"]
 # B008: FastAPI's `Depends()` default-argument pattern is intentional, not a bug.
 ignore = ["B008"]
+
+# Hosts that install this folder with `pip install .` build it with setuptools, which refuses a folder
+# holding two packages (app, migrations). The app runs from source and is never imported as an
+# installed package, so the build only needs to install the dependencies above.
+[tool.setuptools]
+packages = []

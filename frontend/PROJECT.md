@@ -241,9 +241,11 @@ Business questions (referrer earnings, referral funding, buying flow, languages,
 - [x] My orders (`/orders`) and the order page (`/orders/:id`): each shop's part and status, how to pay, report a payment, cancel while unpaid, confirm receipt
 - [x] Route error screen (`pages/error.tsx`): reloads once when a page file is out of date, otherwise offers a reload
 - [x] Wishlist (saved in the browser)
+- [x] Referral page (`/referrals`, open to everyone), linked from the header bar: how the programme works; the user's link and results appear once the backend provides them
 - [x] Animation system in `src/index.css`: `animate-float`, `animate-blob`, `animate-rise`, `reveal` (scroll), `stagger`
 
 ### Temporary
+- `services/referrals.ts` answers `null` because the backend has no referral feature yet (README §20 `X5`), so `/referrals` shows "coming soon" to a signed-in user. Call the real endpoint there when it exists; the shared link is `/register?ref=<code>`, which the register page does not read yet.
 - The dashboard pages flagged `demo` keep their data in memory through `lib/demo-store.ts` (`_data.ts` files, `services/products.demo.ts`, `services/orders.demo.ts`) and show one demo shop. Connect each to its backend API, then delete the demo files with the last of them.
 - Dashboard tables load one page of 100 rows (the backend's maximum) and page through it in the browser. Move `DataTable` to server-side pages before a list can outgrow that.
 - Development reaches the backend through the Vite proxy (`/api` → `http://localhost:8000`) because the backend sends no CORS headers. Production must serve both from one origin, or the backend must allow the frontend's origin.

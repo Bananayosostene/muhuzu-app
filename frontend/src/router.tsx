@@ -17,6 +17,7 @@ export const router = createBrowserRouter([
       { path: 'products/:id', lazy: page(() => import('@/pages/products/detail')) },
       { path: 'wishlist', lazy: page(() => import('@/pages/wishlist')) },
       { path: 'cart', lazy: page(() => import('@/pages/cart')) },
+      { path: 'referrals', lazy: page(() => import('@/pages/referrals')) },
       { path: 'login', lazy: page(() => import('@/pages/auth/login')) },
       { path: 'register', lazy: page(() => import('@/pages/auth/register')) },
       { path: 'verify-email', lazy: page(() => import('@/pages/auth/verify')) },

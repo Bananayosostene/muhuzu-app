@@ -1,0 +1,17 @@
+# Secrets never go into the image: configuration comes from the host's environment variables.
+.env
+.env.*
+!.env.example
+
+# Local environments and caches.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Not needed to run the app.
+tests/
+docs/
+.pytest_*.txt
+*.md
