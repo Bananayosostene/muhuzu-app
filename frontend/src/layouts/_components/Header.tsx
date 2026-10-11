@@ -1,4 +1,4 @@
-import { Gift, Heart, ShoppingCart } from 'lucide-react'
+import { Heart, ShoppingCart } from 'lucide-react'
 import { Link, NavLink } from 'react-router'
 import { Logo } from '@/components/shared/Logo'
 import { buttonVariants } from '@/components/ui/button'
@@ -25,8 +25,9 @@ export function Header({ user, showDashboard, wishlistCount, cartCount, onSignOu
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur-lg">
-      <p className="flex items-center justify-center gap-2 bg-primary px-4 py-1.5 text-center text-xs font-medium text-primary-foreground">
-        <Gift className="size-3.5" /> Invite friends and earn commission on every deal they make
+      <p className="flex items-center justify-center gap-2 bg-primary px-4 py-1.5 text-center text-sm font-medium text-primary-foreground">
+        Invite friends and earn commission on every deal they make.
+        <Link to="/referrals" className="underline underline-offset-2 hover:no-underline">Click here</Link>
       </p>
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-3 px-4 py-3">
         <Logo />
