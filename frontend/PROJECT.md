@@ -249,6 +249,7 @@ Business questions (referrer earnings, referral funding, buying flow, languages,
 - The dashboard pages flagged `demo` keep their data in memory through `lib/demo-store.ts` (`_data.ts` files, `services/products.demo.ts`, `services/orders.demo.ts`) and show one demo shop. Connect each to its backend API, then delete the demo files with the last of them.
 - Dashboard tables load one page of 100 rows (the backend's maximum) and page through it in the browser. Move `DataTable` to server-side pages before a list can outgrow that.
 - Development reaches the backend through the Vite proxy (`/api` → `http://localhost:8000`) because the backend sends no CORS headers. Production must serve both from one origin, or the backend must allow the frontend's origin.
+- Production (Vercel) does the same with `frontend/vercel.json`: `/api/*` is forwarded to the deployed backend, and every other path that is not a file serves `index.html` so routes like `/login` load the app. Change the backend address there if it moves.
 - Footer social links point to `#` until the real Muhuze accounts are known.
 - Hero statistics (15K+ products…) are placeholder numbers, not backend figures.
 
